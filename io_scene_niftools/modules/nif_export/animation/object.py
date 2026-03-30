@@ -56,7 +56,7 @@ class ObjectAnimation(Animation):
             return
 
         # get the hide fcurve
-        fcurves = [fcu for fcu in b_action.fcurves if "hide" in fcu.data_path]
+        fcurves = [fcu for fcu in self.get_fcurves(b_action) if "hide" in fcu.data_path]
         if not fcurves:
             return
 

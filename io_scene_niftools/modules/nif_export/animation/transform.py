@@ -139,10 +139,29 @@ class TransformAnimation(Animation):
         bonestr = ""
 
         # skeletal animation - with bone correction & coordinate corrections
-        if bone and bone.name in b_action.groups:
+        b_group = None
+        if bone:
+            if hasattr(b_action, "groups"):
+                # pre-4.3
+                b_group = b_action.groups.get(bone.name)
+            elif hasattr(b_action, "layers"):
+                # 4.3+ slotted action
+                for layer in b_action.layers:
+                    for strip in layer.strips:
+                        if hasattr(strip, "channelbags"):
+                            for cb in strip.channelbags:
+                                if hasattr(cb, "groups") and bone.name in cb.groups:
+                                    b_group = cb.groups[bone.name]
+                                    break
+                            if b_group:
+                                break
+                    if b_group:
+                        break
+
+        if b_group:
             # get bind matrix for bone
             bind_matrix = math.get_object_bind(bone)
-            exp_fcurves = b_action.groups[bone.name].channels
+            exp_fcurves = b_group.channels
             # just for more detailed error reporting later on
             bonestr = f" in bone {bone.name}"
             target_name = block_store.get_full_name(bone)
@@ -165,7 +184,7 @@ class TransformAnimation(Animation):
             # we want to export matrix_local, and the keyframes are in matrix_basis, so do:
             # matrix_local = matrix_parent_inverse * matrix_basis
             bind_matrix = b_obj.matrix_parent_inverse
-            exp_fcurves = [fcu for fcu in b_action.fcurves if
+            exp_fcurves = [fcu for fcu in self.get_fcurves(b_action) if
                            fcu.data_path in ("rotation_quaternion", "rotation_euler", "location", "scale")]
 
         else:

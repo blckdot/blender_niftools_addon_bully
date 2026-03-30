@@ -102,7 +102,7 @@ class MetaFileFormat(type):
         :param filename: The file to open.
         :type filename: ``str``
         :param filepaths: List of paths where to look for the file.
-        :type filepaths: ``list`` of ``str``\ s
+        :type filepaths: ``list`` of ``str``\\ s
         """
 
         def open_with_encoding(fn):
@@ -149,7 +149,7 @@ class FileFormat(object):
 
     # precompiled regular expressions, used in name_parts
 
-    _RE_NAME_SEP = re.compile('[_\W]+')
+    _RE_NAME_SEP = re.compile(r'[_\W]+')
     """Matches seperators for splitting names."""
     
     _RE_NAME_DIGITS = re.compile('([0-9]+)|([a-zA-Z]+)')

@@ -38,6 +38,13 @@
 # ***** END LICENSE BLOCK *****
 import os
 import sys
+
+if "bpy" in locals():
+    for name in list(sys.modules.keys()):
+        if name.startswith("io_scene_niftools."):
+            del sys.modules[name]
+import bpy
+
 from io_scene_niftools import addon_updater_ops
 from io_scene_niftools.utils import logging, debugging
 from io_scene_niftools.utils.logging import NifLog
@@ -48,7 +55,7 @@ bl_info = {
     "name": "NetImmerse/Gamebryo format support",
     "description": "Import and export files in the NetImmerse/Gamebryo formats (.nif, .kf, .egm)",
     "author": "Niftools team",
-    "blender": (2, 82, 0),
+    "blender": (5, 1, 0),
     "version": (0, 0, 14),  # can't read from VERSION, blender wants it hardcoded
     "api": 39257,
     "location": "File > Import-Export",

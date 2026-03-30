@@ -64,6 +64,24 @@ class Animation(ABC):
         kfc.stop_time = stop_frame / self.fps
 
     @staticmethod
+    def get_fcurves(b_action):
+        """Helper to get all fcurves from an action, handling both pre-4.3 action.fcurves and 4.3+ slotted actions."""
+        if not b_action:
+            return []
+        
+        if hasattr(b_action, "fcurves"):
+            return [fcu for fcu in b_action.fcurves]
+        
+        fcurves = []
+        if hasattr(b_action, "layers"):
+            for layer in b_action.layers:
+                for strip in layer.strips:
+                    if hasattr(strip, "channelbags"):
+                        for cb in strip.channelbags:
+                            fcurves.extend(cb.fcurves)
+        return fcurves
+
+    @staticmethod
     def get_flags_from_fcurves(fcurves):
         # see if there are cyclic extrapolation modifiers on exp_fcurves
         cyclic = False
@@ -85,7 +103,7 @@ class Animation(ABC):
         if b_obj:
             if b_obj.animation_data and b_obj.animation_data.action:
                 b_action = b_obj.animation_data.action
-                if b_action.fcurves:
+                if Animation.get_fcurves(b_action):
                     return b_action
 
     @staticmethod

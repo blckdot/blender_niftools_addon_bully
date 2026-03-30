@@ -82,7 +82,7 @@ class MaterialAnimation(Animation):
         """Export the material alpha or color controller data."""
 
         # get fcurves
-        fcurves = [fcu for fcu in b_material.animation_data.action.fcurves if b_dtype in fcu.data_path]
+        fcurves = [fcu for fcu in self.get_fcurves(b_material.animation_data.action) if b_dtype in fcu.data_path]
         if not fcurves:
             return
 
@@ -136,7 +136,7 @@ class MaterialAnimation(Animation):
         # here we don't care and just take the first fcurve that matches
         fcurves = []
         for dp, ind in (("offset", 0), ("offset", 1), ("scale", 0), ("scale", 1)):
-            for fcu in b_material.animation_data.action.fcurves:
+            for fcu in self.get_fcurves(b_material.animation_data.action):
                 if dp in fcu.data_path and fcu.array_index == ind:
                     fcurves.append(fcu)
                     break

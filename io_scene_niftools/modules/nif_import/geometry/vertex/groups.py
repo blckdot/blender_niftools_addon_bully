@@ -180,9 +180,10 @@ class VertexGroup:
                 group_name = bodypart_wrap.get_detail_display()
 
                 # create face map if it did not exist yet
-                if group_name not in b_obj.face_maps:
-                    f_group = b_obj.face_maps.new(name=group_name)
+                if hasattr(b_obj, "face_maps"):
+                    if group_name not in b_obj.face_maps:
+                        f_group = b_obj.face_maps.new(name=group_name)
 
-                # add the triangles to the face map
-                for vertices in skinpartblock.get_mapped_triangles():
-                    f_group.add(tri_map[frozenset(vertices)])
+                    # add the triangles to the face map
+                    for vertices in skinpartblock.get_mapped_triangles():
+                        f_group.add([tri_map[frozenset(vertices)]])

@@ -122,7 +122,7 @@ class DetailNode(object):
         :param edge_filter: The edge type to include.
         :type edge_filter: :class:`EdgeFilter` or ``type(None)``
         :return: Generator for detail tree child nodes.
-        :rtype: generator yielding :class:`DetailNode`\ s
+        :rtype: generator yielding :class:`DetailNode`\\ s
         """
         return (dummy for dummy in ())
 
@@ -133,7 +133,7 @@ class DetailNode(object):
         Override this method if the node has children.
 
         :return: Generator for detail tree child names.
-        :rtype: generator yielding ``str``\ s
+        :rtype: generator yielding ``str``\\ s
         """
         return (dummy for dummy in ())
 

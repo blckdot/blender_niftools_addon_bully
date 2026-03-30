@@ -72,13 +72,14 @@ class Vertex:
             # the normals need to be pre-normalized or blender will do it inconsistely, leading to marked sharp edges
             no_array = Vertex.normalize(no_array)
             # use normals_split_custom_set_from_vertices to set the loop custom normals from the per-vertex normals
-            b_mesh.use_auto_smooth = True
+            if hasattr(b_mesh, "use_auto_smooth"):
+                b_mesh.use_auto_smooth = True
             b_mesh.normals_split_custom_set_from_vertices(no_array)
 
     @staticmethod
     def normalize(vector_array):
         vector_norms = np.linalg.norm(vector_array, ord=2, axis=1, keepdims=True)
-        non_zero_norms = np.reshape(vector_norms != 0, newshape = len(vector_array))
+        non_zero_norms = np.reshape(vector_norms != 0, len(vector_array))
         normalized_vectors = np.copy(vector_array)
         normalized_vectors[non_zero_norms] /= vector_norms[non_zero_norms]
         return normalized_vectors

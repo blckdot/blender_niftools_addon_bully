@@ -118,7 +118,7 @@ class TransformAnimation(Animation):
                 self.import_text_keys(kf_root, b_action)
                 if kf_root.cycle_type:
                     extend = self.get_extend_from_cycle_type(kf_root.cycle_type)
-                    self.set_extrapolation(extend, b_action.fcurves)
+                    self.set_extrapolation(extend, self.get_fcurves(b_action))
 
     def import_sequence_stream_helper(self, kf_root, b_armature_obj):
         b_action_name = self.import_generic_kf_root(kf_root)
@@ -172,7 +172,7 @@ class TransformAnimation(Animation):
                 # fallout: set global extrapolation mode here (older versions have extrapolation per controller)
                 if kf_root.cycle_type:
                     extend = self.get_extend_from_cycle_type(kf_root.cycle_type)
-                    self.set_extrapolation(extend, b_action.fcurves)
+                    self.set_extrapolation(extend, self.get_fcurves(b_action))
 
     def import_keyframe_controller(self, n_kfc, b_armature, b_target, b_action_name):
         """

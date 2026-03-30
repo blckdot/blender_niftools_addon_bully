@@ -10,7 +10,7 @@
 A :term:`toaster`, implemented by subclasses of the abstract
 :class:`Toaster` class, walks over all files in a folder, and applies
 one or more transformations on each file. Such transformations are
-called :term:`spell`\ s, and are implemented by subclasses of the
+called :term:`spell`\\ s, and are implemented by subclasses of the
 abstract :class:`Spell` class.
 
 A :term:`spell` can also run independently of a :term:`toaster` and be
@@ -410,7 +410,7 @@ class SpellGroupBase(Spell):
     """
 
     SPELLCLASSES = []
-    """List of :class:`Spell`\ s of this group (not instantiated)."""
+    """List of :class:`Spell`\\ s of this group (not instantiated)."""
 
     ACTIVESPELLCLASSES = []
     """List of active spells of this group (not instantiated).
@@ -1365,7 +1365,7 @@ class Toaster(object):
         :type filename: :class:`str`
         :return: The head, root, and extension of the destination, or
             ``(None, None, None)`` if ``--dry-run`` is specified.
-        :rtype: :class:`tuple` of three :class:`str`\ s
+        :rtype: :class:`tuple` of three :class:`str`\\ s
         """
         # first cover trivial case
         if self.options["dryrun"]:

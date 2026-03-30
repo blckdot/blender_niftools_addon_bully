@@ -80,7 +80,8 @@ class Mesh:
 
         # get mesh from b_obj
         b_mesh = self.get_triangulated_mesh(b_obj)
-        b_mesh.calc_normals_split()
+        if hasattr(b_mesh, 'calc_normals_split'):
+            b_mesh.calc_normals_split()
 
         # getVertsFromGroup fails if the mesh has no vertices
         # (this happens when checking for fallout 3 body parts)
@@ -480,7 +481,10 @@ class Mesh:
                                             "Set it to 24 to get higher quality skin partitions.")
                         # Skyrim Special Edition has a limit of 80 bones per partition, but export is not yet supported
 
-                        part_order = [getattr(NifFormat.BSDismemberBodyPartType, face_map.name, None) for face_map in b_obj.face_maps]
+                        if hasattr(b_obj, "face_maps"):
+                            part_order = [getattr(NifFormat.BSDismemberBodyPartType, face_map.name, None) for face_map in b_obj.face_maps]
+                        else:
+                            part_order = []
                         part_order = [body_part for body_part in part_order if body_part is not None]
                         # override pyffi trishape.update_skin_partition with custom one (that allows ordering)
                         trishape.update_skin_partition = update_skin_partition.__get__(trishape)
@@ -559,6 +563,9 @@ class Mesh:
     def get_polygon_parts(self, b_obj, b_mesh):
         """Returns the body part indices of the mesh polygons. -1 is either not assigned to a face map or not a valid
         body part"""
+        if not hasattr(b_obj, "face_maps"):
+            return []
+            
         index_group_map = {-1: -1}
         for bodypartgroupname in NifFormat.BSDismemberBodyPartType().get_editor_keys():
             face_map = b_obj.face_maps.get(bodypartgroupname)

@@ -82,24 +82,63 @@ class Animation:
         else:
             b_action = bpy.data.actions.new(action_name)
             self.actions[action_name] = b_action
+            
+            # Blender 5.0 Slotted Action compatibility
+            if not hasattr(b_action, "fcurves") and hasattr(b_action, "slots"):
+                id_type = 'OBJECT'
+                if isinstance(b_obj, bpy.types.Material):
+                    id_type = 'MATERIAL'
+                elif isinstance(b_obj, bpy.types.Key):
+                    id_type = 'KEY'
+                
+                slot = b_action.slots.new(id_type=id_type, name=action_name)
+                layer = b_action.layers.new("Base Layer")
+                strip = layer.strips.new(type='KEYFRAME')
+                strip.channelbag(slot, ensure=True)
+                
         # could probably skip this test and create always
         if not b_obj.animation_data:
             b_obj.animation_data_create()
+            
         # set as active action on object
         b_obj.animation_data.action = b_action
+        
+        # make sure slot is bound to the object
+        if hasattr(b_obj.animation_data, "action_slot") and hasattr(b_action, "slots"):
+            b_obj.animation_data.action_slot = b_action.slots[0]
+            
         return b_action
 
     def create_fcurves(self, action, dtype, drange, flags=None, bonename=None, keyname=None):
         """ Create fcurves in action for desired conditions. """
+        
+        is_slotted = not hasattr(action, "fcurves") and hasattr(action, "slots")
+        if not is_slotted:
+            fcurves_target = action.fcurves
+        else:
+            slot = action.slots[0]
+            strip = action.layers[0].strips[0]
+            channelbag = strip.channelbag(slot, ensure=True)
+            fcurves_target = channelbag.fcurves
+
+        def _add_fcurve(data_path, index, group_name=""):
+            if not is_slotted:
+                return fcurves_target.new(data_path=data_path, index=index, action_group=group_name)
+            else:
+                try:
+                    return fcurves_target.new(data_path=data_path, index=index)
+                except TypeError:
+                    return fcurves_target.new(data_path)
+
         # armature pose bone animation
         if bonename:
             fcurves = [
-                action.fcurves.new(data_path=f'pose.bones["{bonename}"].{dtype}', index=i, action_group=bonename)
+                _add_fcurve(data_path=f'pose.bones["{bonename}"].{dtype}', index=i, group_name=bonename)
                 for i in drange]
         # shapekey pose bone animation
         elif keyname:
             fcurves = [
-                action.fcurves.new(data_path=f'key_blocks["{keyname}"].{dtype}', index=0,)
+                _add_fcurve(data_path=f'key_blocks["{keyname}"].{dtype}', index=0)
             ]
         else:
             # Object animation (non-skeletal) is lumped into the "LocRotScale" action_group
@@ -108,7 +147,8 @@ class Animation:
             # Non-transformaing animations (eg. visibility or material anims) use no action groups
             else:
                 action_group = ""
-            fcurves = [action.fcurves.new(data_path=dtype, index=i, action_group=action_group) for i in drange]
+            fcurves = [_add_fcurve(data_path=dtype, index=i, group_name=action_group) for i in drange]
+            
         if flags:
             self.set_extrapolation(self.get_extend_from_flags(flags), fcurves)
         return fcurves
@@ -126,6 +166,24 @@ class Animation:
     @staticmethod
     def get_extend_from_cycle_type(cycle_type):
         return ("CYCLIC", "REVERSE", "CONSTANT")[cycle_type]
+
+    @staticmethod
+    def get_fcurves(b_action):
+        """Helper to get all fcurves from an action, handling both pre-4.3 action.fcurves and 4.3+ slotted actions."""
+        if not b_action:
+            return []
+        
+        if hasattr(b_action, "fcurves"):
+            return [fcu for fcu in b_action.fcurves]
+        
+        fcurves = []
+        if hasattr(b_action, "layers"):
+            for layer in b_action.layers:
+                for strip in layer.strips:
+                    if hasattr(strip, "channelbags"):
+                        for cb in strip.channelbags:
+                            fcurves.extend(cb.fcurves)
+        return fcurves
 
     @staticmethod
     def set_extrapolation(extend_type, fcurves):

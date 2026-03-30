@@ -170,7 +170,8 @@ class NodesWrapper:
 
     def clear_default_nodes(self):
         self.b_mat.use_backface_culling = True
-        self.b_mat.use_nodes = True
+        if hasattr(self.b_mat, "use_nodes"):
+            self.b_mat.use_nodes = True
         self.tree = self.b_mat.node_tree
         # clear default nodes
         for node in self.tree.nodes:
@@ -315,13 +316,24 @@ class NodesWrapper:
             group_nodes = node_group.nodes
             # add the in/output nodes
             input_node = group_nodes.new('NodeGroupInput')
-            node_group.inputs.new('NodeSocketImage', "Input")
+            if hasattr(node_group, "interface"):
+                node_group.interface.new_socket(name="Input", in_out='INPUT', socket_type='NodeSocketColor')
+            else:
+                node_group.inputs.new('NodeSocketColor', "Input")
+
             output_node = group_nodes.new('NodeGroupOutput')
-            node_group.outputs.new('NodeSocketImage', "Output")
+            if hasattr(node_group, "interface"):
+                node_group.interface.new_socket(name="Output", in_out='OUTPUT', socket_type='NodeSocketColor')
+            else:
+                node_group.outputs.new('NodeSocketColor', "Output")
             # create the converting nodes
-            separate_node = group_nodes.new("ShaderNodeSeparateRGB")
+            try:
+                separate_node = group_nodes.new("ShaderNodeSeparateColor")
+                combine_node = group_nodes.new("ShaderNodeCombineColor")
+            except RuntimeError:
+                separate_node = group_nodes.new("ShaderNodeSeparateRGB")
+                combine_node = group_nodes.new("ShaderNodeCombineRGB")
             invert_node = group_nodes.new("ShaderNodeInvert")
-            combine_node = group_nodes.new("ShaderNodeCombineRGB")
             # link the converting nodes to each other
             group_links = node_group.links
             group_links.new(combine_node.inputs[0], separate_node.outputs[0])

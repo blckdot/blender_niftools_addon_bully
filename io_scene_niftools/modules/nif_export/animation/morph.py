@@ -93,7 +93,7 @@ class MorphAnimation(Animation):
         morph_ctrl = block_store.create_block("NiGeomMorpherController", b_shape_action)
         morph_ctrl.target = n_trishape
         n_trishape.add_controller(morph_ctrl)
-        self.set_flags_and_timing(morph_ctrl, b_shape_action.fcurves, *b_shape_action.frame_range)
+        self.set_flags_and_timing(morph_ctrl, self.get_fcurves(b_shape_action), *b_shape_action.frame_range)
 
         # create geometry n_morph data
         morph_data = block_store.create_block("NiMorphData", b_shape_action)
@@ -145,12 +145,12 @@ class MorphAnimation(Animation):
             morph_ctrl.interpolator_weights[key_block_num].interpolator = interpol
 
             # geometry only export has no float data also skip keys that have no fcu (such as base b_key)
-            if NifOp.props.animation == 'GEOM_NIF' or not b_shape_action.fcurves:
+            if NifOp.props.animation == 'GEOM_NIF' or not self.get_fcurves(b_shape_action):
                 continue
             
             # find fcurve that animates this shapekey's influence
             b_dtype = f'key_blocks["{key_block.name}"].value'
-            fcurves = [fcu for fcu in b_shape_action.fcurves if b_dtype in fcu.data_path]
+            fcurves = [fcu for fcu in self.get_fcurves(b_shape_action) if b_dtype in fcu.data_path]
             if not fcurves:
                 continue
             fcu = fcurves[0]
