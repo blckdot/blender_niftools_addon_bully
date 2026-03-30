@@ -6,15 +6,15 @@ This is a modified fork of a VicLourenco modified fork that's essentially a fork
 Compatible with Blender 5.x, may NOT be compatible with anything lower than that. For Blender 2.8 - 3.6, you can use original VicLourenco modified fork that can be found in **[Bully Modding Discord](https://discord.gg/RcCAE8csCP)**
 
 ## Features of original VicLourenco modified fork:
-On import, Bully is now prioritized above other potential originating games
-Similar materials are no longer merged
-Vertex colors are exported properly
-Tangents and Bitangents are exported properly
-NiTexturingProperty nodes have their properties fixed
+- On import, Bully is now prioritized above other potential originating games
+- Similar materials are no longer merged
+- Vertex colors are exported properly
+- Tangents and Bitangents are exported properly
+- NiTexturingProperty nodes have their properties fixed
 
 ## Installation
 1. Download the repository as a `.zip` file.
-2. In Blender 5.1, go to `Edit > Preferences > Get Extensions`.
+2. In Blender 5.x, go to `Edit > Preferences > Get Extensions`.
 3. Click the drop-down arrow in the top right and select `Install from Disk...`.
 4. Select the `.zip` file and enable the addon.
 
@@ -35,13 +35,13 @@ In Color Attributes, make sure yours is called "RGBA". If you don't already have
 2. Open the exported .nif in **[NifSkope](https://github.com/niftools/nifskope/releases/tag/nifskope-1.1.3)**, expand your model's NiTriShape>NiTexturingProperty, in Block Details at the bottom, find Base Texture and set "Flags" to 12800. Not doing this will make the game crash, and needs to be done for every mesh of your model using a different material. You're done, load the model in-game and test your changes.
 
 ## Additional Notes
-1. Rigged clothes/peds have certain bones which don't need vertex groups, but Blender will generate them when you attach your model to their armature. Use the original .nif as a reference to check which groups you can delete. (E.g., gameplay clothes models for Jimmy don't need "Root" and "Root01", so those can safely be deleted)
+- Rigged clothes/peds have certain bones which don't need vertex groups, but Blender will generate them when you attach your model to their armature. Use the original .nif as a reference to check which groups you can delete. (E.g., gameplay clothes models for Jimmy don't need "Root" and "Root01", so those can safely be deleted)
 
-2. Jimmy's clothes refuse to load any more than 1 texture when in-game. As such, make sure your whole model uses a single material.
+- Jimmy's clothes refuse to load any more than 1 texture when in-game. As such, make sure your whole model uses a single material.
 
-3. Do not use multiple materials for a single mesh.
+- Do not use multiple materials for a single mesh.
 
-4. Most models in the game have backface culling turned on. To disable it, open your exported .nif, expand your model's NiTriShape>Add a "NiStencilProperty" if you don't have it, and in Block Details at the bottom, scroll all the way down and set "Flags" to 19840.
+- Most models in the game have backface culling turned on. To disable it, open your exported .nif, expand your model's NiTriShape>Add a "NiStencilProperty" if you don't have it, and in Block Details at the bottom, scroll all the way down and set "Flags" to 19840.
 
 ## Credits
 * **VicLourenco** for the initial optimizations for Bully: Scholarship Edition.
