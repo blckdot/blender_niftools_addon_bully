@@ -204,8 +204,9 @@ class Mesh:
             if b_mesh.polygons:
                 if mesh_uv_layers:
                     # if we have uv coordinates double check that we have uv data
-                    if not b_mesh.uv_layer_stencil:
-                        NifLog.warn(f"No UV map for texture associated with selected mesh '{b_mesh.name}'.")
+                    for uv_layer in mesh_uv_layers:
+                        if not uv_layer.data:
+                            NifLog.warn(f"No UV map for texture associated with selected mesh '{b_mesh.name}'.")
 
             use_tangents = False
             if mesh_uv_layers and mesh_hasnormals:
