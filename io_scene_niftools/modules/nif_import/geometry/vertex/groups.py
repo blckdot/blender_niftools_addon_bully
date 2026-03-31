@@ -186,4 +186,4 @@ class VertexGroup:
 
                     # add the triangles to the face map
                     for vertices in skinpartblock.get_mapped_triangles():
-                        f_group.add([tri_map[frozenset(vertices)]])
+                        f_group.add(tri_map[frozenset(vertices)])

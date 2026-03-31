@@ -38,13 +38,6 @@
 # ***** END LICENSE BLOCK *****
 import os
 import sys
-
-if "bpy" in locals():
-    for name in list(sys.modules.keys()):
-        if name.startswith("io_scene_niftools."):
-            del sys.modules[name]
-import bpy
-
 from io_scene_niftools import addon_updater_ops
 from io_scene_niftools.utils import logging, debugging
 from io_scene_niftools.utils.logging import NifLog
