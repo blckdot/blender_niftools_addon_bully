@@ -12,6 +12,16 @@ Compatible with Blender 5.x, may NOT be compatible with anything lower than that
 - Tangents and Bitangents are exported properly
 - NiTexturingProperty nodes have their properties fixed
 
+## Screenshots
+<details>
+<summary>Click to expand screenshots</summary>
+  
+![20260401131135_1](https://github.com/user-attachments/assets/4cd37934-2b36-422f-9663-8156e2c6216a)
+![20260403211727_1](https://github.com/user-attachments/assets/aec979e5-8436-4b2d-99a6-78fd4a194a21)
+![20260403233829_1](https://github.com/user-attachments/assets/575ae777-03bb-4500-b801-4d255abf2a43)
+
+</details>
+
 ## Installation
 1. Download the repository as a `.zip` file.
 2. In Blender 5.x, go to `Edit > Preferences > Get Extensions`.
