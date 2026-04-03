@@ -128,7 +128,7 @@ class TextureWriter:
         # sanitize file path
         if bpy.context.scene.niftools_scene.game not in ('MORROWIND', 'OBLIVION', 'FALLOUT_3', 'SKYRIM'):
             # strip b_texture_node file path
-            filename = os.path.basename(filename)
+            filename = os.path.basename(bpy.path.abspath(filename))
 
         else:
             # strip the data files prefix from the b_texture_node's file name

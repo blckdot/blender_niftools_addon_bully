@@ -121,6 +121,10 @@ class NiTextureProp(TextureSlotManager):
                 texdesc.uv_set = uv_index
                 texdesc.source = TextureWriter.export_source_texture(b_texture_node)
 
+                # set texture flags for reliable render
+                if bpy.context.scene.niftools_scene.game == 'BULLY_SE':
+                    texdesc.flags = 0x3200
+
         # TODO [animation] FIXME Heirarchy
         # self.texture_anim.export_flip_controller(fliptxt, self.base_mtex.texture, texprop, 0)
 
