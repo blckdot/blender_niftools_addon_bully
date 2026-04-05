@@ -133,6 +133,11 @@ class NifExportOperator(Operator, ExportHelper, CommonDevOperator, CommonNif, Co
         description="Write an additional .nft file with embedded texture data",
         default=False)
 
+    auto_bully_texture_flags: bpy.props.BoolProperty(
+        name="Set Base Texture Flags",
+        description="Auto set Base Texture Flags value to 12800 for reliable render",
+        default=True)
+
     def draw(self, context):
         pass
 

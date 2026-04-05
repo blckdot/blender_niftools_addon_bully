@@ -252,7 +252,6 @@ class NifExport(NifCommon):
                 ext = ".nifcache"
             else:
                 ext = ".nif"
-            NifLog.info(f"Writing {ext} file")
 
             # make sure we have the right file extension
             if fileext.lower() != ext:
@@ -269,6 +268,7 @@ class NifExport(NifCommon):
             elif bpy.context.scene.niftools_scene.game == 'HOWLING_SWORD':
                 data.modification = "jmihs1"
 
+            NifLog.info(f"Writing .nif file: {niffile}")
             with open(niffile, "wb") as stream:
                 data.write(stream)
 
@@ -284,14 +284,15 @@ class NifExport(NifCommon):
             # -----------------
             if EGMData.data:
                 ext = ".egm"
-                NifLog.info(f"Writing {ext} file")
-
                 egmfile = os.path.join(directory, filebase + ext)
+                NifLog.info(f"Writing {ext} file: {egmfile}")
+
                 with open(egmfile, "wb") as stream:
                     EGMData.data.write(stream)
 
             # save exported file (this is used by the test suite)
             self.root_blocks = [root_block]
+            NifLog.info("Finished")
 
         except NifError:
             return {'CANCELLED'}
