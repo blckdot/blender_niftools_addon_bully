@@ -272,6 +272,14 @@ class NifExport(NifCommon):
             with open(niffile, "wb") as stream:
                 data.write(stream)
 
+            if NifOp.props.export_nft:
+                nftfile = os.path.join(directory, prefix + filebase + ".nft")
+                NifLog.info(f"Writing .nft file: {nftfile}")
+                embedded_data = self._create_embedded_texture_data(data, root_block)
+                
+                with open(nftfile, "wb") as stream:
+                    embedded_data.write(stream)
+
             # export egm file:
             # -----------------
             if EGMData.data:
@@ -288,5 +296,251 @@ class NifExport(NifCommon):
         except NifError:
             return {'CANCELLED'}
 
-        NifLog.info("Finished")
         return {'FINISHED'}
+
+    def _create_embedded_texture_data(self, data, root_block):
+        NifLog.info(f"[NFT] Creating texture container from {root_block.__class__.__name__}")
+        embedded_data = NifFormat.Data()
+        embedded_data.version = data.version
+        embedded_data.modification = data.modification
+        embedded_data.neosteam = data.neosteam
+        
+        nft_roots = []
+        found_count = 0
+        embedded_count = 0
+        
+        # In a .nft file, the root blocks are only the NiSourceTexture blocks.
+        # There is no geometry data. We extract them from the original tree.
+        for source_texture in root_block.tree(block_type=NifFormat.NiSourceTexture):
+            found_count += 1
+            file_name = source_texture.file_name
+            orig_file_name = file_name
+            
+            if not source_texture.use_external:
+                continue
+                
+            if isinstance(file_name, bytes):
+                file_name = file_name.decode('utf-8', 'ignore')
+            if not file_name:
+                continue
+                
+            image = self._load_texture_image(file_name)
+            if image is None:
+                NifLog.warn(f"[NFT] Could not load texture '{file_name}'")
+                continue
+                
+            # Create a completely new root NiSourceTexture block for the .nft file
+            nft_tex = NifFormat.NiSourceTexture()
+            nft_tex.use_external = 0
+            nft_tex.unknown_byte = 1
+            
+            # Use the absolute path of the Blender image for embedding
+            try:
+                abs_path = os.path.normpath(bpy.path.abspath(image.filepath))
+            except Exception:
+                abs_path = image.name
+                
+            nft_tex.file_name = abs_path.encode('utf-8')
+                
+            if hasattr(nft_tex, 'pixel_layout'):
+                nft_tex.pixel_layout = 6 # PIX_LAY_DEFAULT or appropriate enum
+            if hasattr(nft_tex, 'use_mipmaps'):
+                nft_tex.use_mipmaps = 0 # MIP_FMT_NO
+            if hasattr(nft_tex, 'alpha_format'):
+                nft_tex.alpha_format = 0 # ALPHA_DEFAULT
+            if hasattr(nft_tex, 'is_static'):
+                nft_tex.is_static = 1
+            if hasattr(nft_tex, 'direct_render'):
+                nft_tex.direct_render = False
+            if hasattr(nft_tex, 'persist_render_data'):
+                nft_tex.persist_render_data = False
+                
+            # Add Extra Data and PixelData blocks to the NiSourceTexture
+            str_extra = NifFormat.NiStringExtraData()
+            str_extra.name = b""
+            str_extra.bytes_data = nft_tex.file_name
+            
+            int_extra = NifFormat.NiIntegerExtraData()
+            int_extra.name = b"NifPackMinorVersion"
+            int_extra.integer_data = 2
+            
+            nft_tex.num_extra_data_list = 2
+            nft_tex.extra_data_list.update_size()
+            nft_tex.extra_data_list[0] = str_extra
+            nft_tex.extra_data_list[1] = int_extra
+            
+            # Create and attach the core PixelData
+            pixel_data_block = self._create_pixeldata_from_image(image)
+            nft_tex.pixel_data = pixel_data_block
+            
+            nft_roots.append(nft_tex)
+            embedded_count += 1
+            NifLog.info(f"[NFT] Added root NiSourceTexture for '{file_name}'")
+            
+        embedded_data.roots = nft_roots
+        NifLog.info(f"[NFT] NFT generation complete: found {found_count} textures, packed {embedded_count} as root blocks.")
+        return embedded_data
+
+    @staticmethod
+    def _resolve_texture_path(file_name):
+        normalized = file_name.replace('\\', os.sep).replace('/', os.sep)
+        if os.path.isabs(normalized):
+            path = normalized
+        elif normalized.startswith('//'):
+            path = bpy.path.abspath(normalized)
+        else:
+            path = os.path.join(os.path.dirname(NifOp.props.filepath), normalized)
+            if not os.path.exists(path):
+                path = os.path.abspath(normalized)
+
+        if os.path.exists(path):
+            return os.path.normpath(path)
+
+        base_name = os.path.basename(normalized)
+        name, ext = os.path.splitext(base_name)
+        candidate_exts = [ext] if ext else []
+        candidate_exts.extend(['.tga', '.dds', '.png', '.jpg', '.jpeg', '.bmp'])
+
+        search_dirs = [
+            os.path.dirname(path),
+            os.path.dirname(NifOp.props.filepath),
+        ]
+        if normalized.startswith('//'):
+            search_dirs.append(os.path.dirname(bpy.path.abspath(normalized)))
+
+        seen = set()
+        for search_dir in search_dirs:
+            if not search_dir:
+                continue
+            search_dir = os.path.normpath(search_dir)
+            if search_dir in seen:
+                continue
+            seen.add(search_dir)
+            for candidate_ext in candidate_exts:
+                candidate = os.path.join(search_dir, name + candidate_ext)
+                if os.path.exists(candidate):
+                    return os.path.normpath(candidate)
+
+        return os.path.normpath(path)
+
+    def _load_texture_image(self, file_name):
+        search_name = os.path.splitext(os.path.basename(file_name))[0].lower()
+        NifLog.info(f"[NFT] Looking for image matching '{search_name}' in exported objects")
+
+        for b_obj in self.exportable_objects:
+            if b_obj.type != 'MESH':
+                continue
+
+            for mat in b_obj.data.materials:
+                if not mat or not getattr(mat, "use_nodes", False):
+                    continue
+
+                for node in mat.node_tree.nodes:
+                    if node.type == 'TEX_IMAGE' and node.image:
+                        image = node.image
+
+                        img_path_name = os.path.splitext(os.path.basename(image.filepath))[0].lower()
+                        img_obj_name = os.path.splitext(image.name)[0].lower()
+
+                        if img_path_name == search_name or img_obj_name == search_name:
+                            if not getattr(image, "has_data", False):
+                                NifLog.warn(f"[NFT] Texture '{image.name}' has no pixel data in Blender. Skipping packing.")
+                                return None
+                            if getattr(image, "source", None) == 'GENERATED' and image.size[0] == 1 and image.size[1] == 1:
+                                NifLog.warn(f"[NFT] Texture '{image.name}' is a 1x1 generated dummy image. Skipping packing.")
+                                return None
+                            try:
+                                abs_path = os.path.normpath(bpy.path.abspath(image.filepath))
+                                if not getattr(image, "packed_file", None) and not os.path.exists(abs_path):
+                                    NifLog.warn(f"[NFT] Texture '{image.name}' physical file is missing from PC path '{abs_path}'. Skipping packing.")
+                                    return None
+                            except Exception:
+                                pass
+
+                            NifLog.info(f"[NFT] Found used image from mesh material: {image.name}")
+                            return image
+
+        NifLog.warn(f"[NFT] Could not find the original image for '{file_name}' assigned in exported materials!")
+        return None
+
+    @staticmethod
+    def _create_pixeldata_from_image(image):
+        width, height = image.size
+        pixels = list(image.pixels)
+        num_pixels = width * height
+        num_bytes = num_pixels * 4
+        
+        NifLog.info(f"[NFT] Preparing pixel data for {image.name} ({width}x{height})")
+        
+        if not any(pixels):
+            NifLog.warn(f"[NFT] WARNING: The loaded image {image.name} has all empty/zero pixels!")
+
+        pixeldata = NifFormat.NiPixelData()
+        pixeldata.num_pixels = num_pixels
+        pixeldata.num_faces = 1
+        pixeldata.num_mipmaps = 1
+        pixeldata.bytes_per_pixel = 4
+        pixeldata.bits_per_pixel = 32
+        
+        if hasattr(pixeldata, 'pixel_format'):
+            pixeldata.pixel_format = 1 
+            
+        pixeldata.red_mask = 0x000000FF
+        pixeldata.green_mask = 0x0000FF00
+        pixeldata.blue_mask = 0x00FF0000
+        pixeldata.alpha_mask = 0xFF000000
+        
+        if hasattr(pixeldata, "bits_per_pixel"):
+            pixeldata.bits_per_pixel = 32
+            
+        if hasattr(pixeldata, "unknown_int_2"):
+            pixeldata.unknown_int_2 = -1
+            
+        if hasattr(pixeldata, "flags"):
+            pixeldata.flags = 1
+            
+        if hasattr(pixeldata, "channels"):
+            pixeldata.channels.update_size()
+            for i, c in enumerate(pixeldata.channels):
+                c.type = i  # 0=Red, 1=Green, 2=Blue, 3=Alpha/Empty
+                c.convention = 0
+                c.bits_per_channel = 8
+        
+        if hasattr(pixeldata, "unknown_8_bytes"):
+            pixeldata.unknown_8_bytes.update_size()
+            for i, b in enumerate((129, 8, 130, 32, 0, 65, 12, 0)):
+                if i < len(pixeldata.unknown_8_bytes):
+                    pixeldata.unknown_8_bytes[i] = b
+                    
+        pixeldata.mipmaps.update_size()
+        pixeldata.mipmaps[0].width = width
+        pixeldata.mipmaps[0].height = height
+        pixeldata.mipmaps[0].offset = 0
+
+        # The pixel data is stored in a single byte array. The length of this array is num_pixels * bytes_per_pixel.
+        pixeldata.num_pixels = num_bytes
+        pixeldata.pixel_data.update_size()
+        
+        byte_data = bytearray(num_bytes)
+        for y in range(height):
+            for x in range(width):
+                src_i = ((height - 1 - y) * width + x) * 4
+                dst_i = (y * width + x) * 4
+                # Convert from Blender's float RGBA to byte RGBA, clamping values to [0,1] and scaling to [0,255]
+                byte_data[dst_i]   = int(max(0.0, min(1.0, pixels[src_i])) * 255.0)
+                byte_data[dst_i+1] = int(max(0.0, min(1.0, pixels[src_i+1])) * 255.0)
+                byte_data[dst_i+2] = int(max(0.0, min(1.0, pixels[src_i+2])) * 255.0)
+                byte_data[dst_i+3] = int(max(0.0, min(1.0, pixels[src_i+3])) * 255.0)
+            
+        NifLog.info(f"[NFT] Assigning PyFFI pixel data elements...")
+        
+        data_row = pixeldata.pixel_data[0]
+        
+        # if it has _items, we can assign the whole bytearray at once, otherwise we have to assign byte by byte
+        if hasattr(data_row, "_items"):
+            data_row._items = list(byte_data)
+        else:
+            for i in range(num_bytes):
+                data_row[i] = byte_data[i]
+        
+        return pixeldata
