@@ -226,7 +226,14 @@ class TextureLoader:
     def import_nft_texture_source(self, source, original_filename):
         base = os.path.splitext(os.path.basename(original_filename))[0]
         fn = f"{base}.dds"
-        tex = os.path.join(os.path.dirname(NifOp.props.filepath), fn)
+        
+        # create a dedicated directory to prevent overwriting user files
+        nft_base = os.path.splitext(os.path.basename(NifOp.props.filepath))[0]
+        extract_dir = os.path.join(os.path.dirname(NifOp.props.filepath), f"{nft_base}_textures")
+        if not os.path.exists(extract_dir):
+            os.makedirs(extract_dir)
+            
+        tex = os.path.join(extract_dir, fn)
         
         # save embedded texture as dds file
         with open(tex, "wb") as stream:

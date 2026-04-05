@@ -355,12 +355,12 @@ class NifExport(NifCommon):
                 nft_tex.direct_render = False
             if hasattr(nft_tex, 'persist_render_data'):
                 nft_tex.persist_render_data = False
-                
+
             # Add Extra Data and PixelData blocks to the NiSourceTexture
             str_extra = NifFormat.NiStringExtraData()
             str_extra.name = b""
             str_extra.bytes_data = nft_tex.file_name
-            
+
             int_extra = NifFormat.NiIntegerExtraData()
             int_extra.name = b"NifPackMinorVersion"
             int_extra.integer_data = 2
@@ -381,48 +381,6 @@ class NifExport(NifCommon):
         embedded_data.roots = nft_roots
         NifLog.info(f"[NFT] NFT generation complete: found {found_count} textures, packed {embedded_count} as root blocks.")
         return embedded_data
-
-    @staticmethod
-    def _resolve_texture_path(file_name):
-        normalized = file_name.replace('\\', os.sep).replace('/', os.sep)
-        if os.path.isabs(normalized):
-            path = normalized
-        elif normalized.startswith('//'):
-            path = bpy.path.abspath(normalized)
-        else:
-            path = os.path.join(os.path.dirname(NifOp.props.filepath), normalized)
-            if not os.path.exists(path):
-                path = os.path.abspath(normalized)
-
-        if os.path.exists(path):
-            return os.path.normpath(path)
-
-        base_name = os.path.basename(normalized)
-        name, ext = os.path.splitext(base_name)
-        candidate_exts = [ext] if ext else []
-        candidate_exts.extend(['.tga', '.dds', '.png', '.jpg', '.jpeg', '.bmp'])
-
-        search_dirs = [
-            os.path.dirname(path),
-            os.path.dirname(NifOp.props.filepath),
-        ]
-        if normalized.startswith('//'):
-            search_dirs.append(os.path.dirname(bpy.path.abspath(normalized)))
-
-        seen = set()
-        for search_dir in search_dirs:
-            if not search_dir:
-                continue
-            search_dir = os.path.normpath(search_dir)
-            if search_dir in seen:
-                continue
-            seen.add(search_dir)
-            for candidate_ext in candidate_exts:
-                candidate = os.path.join(search_dir, name + candidate_ext)
-                if os.path.exists(candidate):
-                    return os.path.normpath(candidate)
-
-        return os.path.normpath(path)
 
     def _load_texture_image(self, file_name):
         search_name = os.path.splitext(os.path.basename(file_name))[0].lower()
@@ -463,14 +421,18 @@ class NifExport(NifCommon):
 
     @staticmethod
     def _create_pixeldata_from_image(image):
+        import numpy as np
+        
         width, height = image.size
-        pixels = list(image.pixels)
         num_pixels = width * height
         num_bytes = num_pixels * 4
         
         NifLog.info(f"[NFT] Preparing pixel data for {image.name} ({width}x{height})")
         
-        if not any(pixels):
+        pixels = np.empty(num_bytes, dtype=np.float32)
+        image.pixels.foreach_get(pixels)
+        
+        if not np.any(pixels):
             NifLog.warn(f"[NFT] WARNING: The loaded image {image.name} has all empty/zero pixels!")
 
         pixeldata = NifFormat.NiPixelData()
@@ -519,16 +481,13 @@ class NifExport(NifCommon):
         pixeldata.num_pixels = num_bytes
         pixeldata.pixel_data.update_size()
         
-        byte_data = bytearray(num_bytes)
-        for y in range(height):
-            for x in range(width):
-                src_i = ((height - 1 - y) * width + x) * 4
-                dst_i = (y * width + x) * 4
-                # Convert from Blender's float RGBA to byte RGBA, clamping values to [0,1] and scaling to [0,255]
-                byte_data[dst_i]   = int(max(0.0, min(1.0, pixels[src_i])) * 255.0)
-                byte_data[dst_i+1] = int(max(0.0, min(1.0, pixels[src_i+1])) * 255.0)
-                byte_data[dst_i+2] = int(max(0.0, min(1.0, pixels[src_i+2])) * 255.0)
-                byte_data[dst_i+3] = int(max(0.0, min(1.0, pixels[src_i+3])) * 255.0)
+        # Convert from Blender's float RGBA to byte RGBA
+        pixels = pixels.reshape((height, width, 4))
+        pixels = np.flipud(pixels)
+        pixels = np.clip(pixels, 0.0, 1.0)
+        pixels = (pixels * 255.0).astype(np.uint8)
+        
+        byte_data = bytearray(pixels.tobytes())
             
         NifLog.info(f"[NFT] Assigning PyFFI pixel data elements...")
         
