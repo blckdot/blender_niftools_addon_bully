@@ -198,10 +198,45 @@ class TextureLoader:
         if not source:
             return None
 
+        # Check for NFT override
+        if hasattr(NifOp.props, "read_nft") and NifOp.props.read_nft:
+            from io_scene_niftools.utils.singleton import NFTData
+            if NFTData.data:
+                if isinstance(source, NifFormat.NiSourceTexture):
+                    fn = source.file_name.decode()
+                elif isinstance(source, str):
+                    fn = source
+                else:
+                    fn = None
+                
+                if fn:
+                    search_name = os.path.basename(fn).lower()
+                    for root in NFTData.data.roots:
+                        if isinstance(root, NifFormat.NiSourceTexture) and root.pixel_data:
+                            root_fn = os.path.basename(root.file_name.decode()).lower()
+                            if root_fn == search_name:
+                                NifLog.info(f"[NFT] Found matching embedded texture in .nft for {search_name}")
+                                return self.import_nft_texture_source(root, fn)
+
         if isinstance(source, NifFormat.NiSourceTexture) and not source.use_external and NifOp.props.use_embedded_texture:
             return self.import_embedded_texture_source(source)
         else:
             return self.import_external_source(source)
+
+    def import_nft_texture_source(self, source, original_filename):
+        base = os.path.splitext(os.path.basename(original_filename))[0]
+        fn = f"{base}.dds"
+        tex = os.path.join(os.path.dirname(NifOp.props.filepath), fn)
+        
+        # save embedded texture as dds file
+        with open(tex, "wb") as stream:
+            try:
+                NifLog.info(f"[NFT] Saving embedded texture to {tex}")
+                source.pixel_data.save_as_dds(stream)
+            except ValueError:
+                NifLog.warn(f"Pixel format not supported in embedded texture {tex}!")
+
+        return self.load_image(tex)
 
     def import_embedded_texture_source(self, source):
 

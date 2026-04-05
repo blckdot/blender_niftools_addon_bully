@@ -136,7 +136,7 @@ class OperatorImportTexturePanel(OperatorSetting, Panel):
         operator = sfile.active_operator
 
         layout.prop(operator, "use_embedded_texture")
-
+        layout.prop(operator, "read_nft")
 
 class OperatorImportArmaturePanel(OperatorSetting, Panel):
     bl_label = "Armature"

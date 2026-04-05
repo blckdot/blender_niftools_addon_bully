@@ -444,9 +444,6 @@ class NifExport(NifCommon):
                         img_obj_name = os.path.splitext(image.name)[0].lower()
 
                         if img_path_name == search_name or img_obj_name == search_name:
-                            if not getattr(image, "has_data", False):
-                                NifLog.warn(f"[NFT] Texture '{image.name}' has no pixel data in Blender. Skipping packing.")
-                                return None
                             if getattr(image, "source", None) == 'GENERATED' and image.size[0] == 1 and image.size[1] == 1:
                                 NifLog.warn(f"[NFT] Texture '{image.name}' is a 1x1 generated dummy image. Skipping packing.")
                                 return None

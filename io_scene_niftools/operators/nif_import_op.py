@@ -117,6 +117,11 @@ class NifImportOperator(Operator, ImportHelper, CommonScale, CommonDevOperator, 
         description="Loads texture embedded in .nif",
         default=False)
 
+    read_nft: bpy.props.BoolProperty(
+        name="Scan for NFT",
+        description="Read textures from an .nft file if present with the same name",
+        default=False)
+
     def draw(self, context):
         pass
 

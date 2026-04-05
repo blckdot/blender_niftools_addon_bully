@@ -38,6 +38,7 @@
 # ***** END LICENSE BLOCK *****
 
 
+import os
 import bpy
 import pyffi.spells.nif.fix
 from pyffi.formats.nif import NifFormat
@@ -141,6 +142,18 @@ class NifImport(NifCommon):
         NifData.init(NifFile.load_nif(NifOp.props.filepath))
         if NifOp.props.override_scene_info:
             scene.import_version_info(NifData.data)
+
+        # check for .nft if requested
+        if hasattr(NifOp.props, "read_nft") and NifOp.props.read_nft:
+            from io_scene_niftools.utils.singleton import NFTData
+            NFTData.reset()
+            nft_path = os.path.splitext(NifOp.props.filepath)[0] + ".nft"
+            if os.path.exists(nft_path):
+                try:
+                    NifLog.info(f"Loading .nft file: {nft_path}")
+                    NFTData.init(NifFile.load_nif(nft_path))
+                except Exception as e:
+                    NifLog.warn(f"Failed to load .nft file: {e}")
 
     def import_root(self, root_block):
         """Main import function."""
