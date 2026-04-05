@@ -128,6 +128,16 @@ class NifExportOperator(Operator, ExportHelper, CommonDevOperator, CommonNif, Co
         description="Remove duplicate materials",
         default=True)
 
+    export_nft: bpy.props.BoolProperty(
+        name="Export .nft copy (embedded textures)",
+        description="Write an additional .nft file with embedded texture data",
+        default=False)
+
+    auto_bully_texture_flags: bpy.props.BoolProperty(
+        name="Set Base Texture Flags",
+        description="Auto set Base Texture Flags value to 12800 for reliable render",
+        default=True)
+
     def draw(self, context):
         pass
 

@@ -144,6 +144,8 @@ class OperatorExportOptimisePanel(OperatorSetting, Panel):
         layout.prop(operator, "stitch_strips")
         layout.prop(operator, "force_dds")
         layout.prop(operator, "optimise_materials")
+        layout.prop(operator, "export_nft")
+        layout.prop(operator, "auto_bully_texture_flags")
 
 
 classes = [

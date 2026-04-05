@@ -42,6 +42,7 @@ from pyffi.formats.nif import NifFormat
 from io_scene_niftools.modules.nif_export.block_registry import block_store
 from io_scene_niftools.modules.nif_export.property.texture import TextureSlotManager, TextureWriter
 from io_scene_niftools.utils.logging import NifLog
+from io_scene_niftools.utils.singleton import NifOp
 
 
 class NiTextureProp(TextureSlotManager):
@@ -122,7 +123,7 @@ class NiTextureProp(TextureSlotManager):
                 texdesc.source = TextureWriter.export_source_texture(b_texture_node)
 
                 # set texture flags for reliable render
-                if bpy.context.scene.niftools_scene.game == 'BULLY_SE':
+                if bpy.context.scene.niftools_scene.game == 'BULLY_SE' and NifOp.props.auto_bully_texture_flags:
                     texdesc.flags = 0x3200
 
         # TODO [animation] FIXME Heirarchy

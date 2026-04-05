@@ -95,3 +95,18 @@ class EGMData:
     @staticmethod
     def init(data):
         EGMData.data = data
+
+class NFTData:
+
+    data = None
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def init(data):
+        NFTData.data = data
+
+    @staticmethod
+    def reset():
+        NFTData.data = None
