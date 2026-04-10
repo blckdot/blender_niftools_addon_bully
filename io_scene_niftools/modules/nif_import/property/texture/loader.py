@@ -224,8 +224,11 @@ class TextureLoader:
             return self.import_external_source(source)
 
     def import_nft_texture_source(self, source, original_filename):
-        base = os.path.splitext(os.path.basename(original_filename))[0]
-        fn = f"{base}.dds"
+        original_name = os.path.basename(original_filename)
+        base, ext = os.path.splitext(original_name)
+        if not ext:
+            ext = ".dds"
+        fn = f"{base}{ext}"
         
         # create a dedicated directory to prevent overwriting user files
         nft_base = os.path.splitext(os.path.basename(NifOp.props.filepath))[0]

@@ -42,6 +42,7 @@ import os.path
 
 import bpy
 import pyffi.spells.nif.fix
+from pyffi.formats.dds import DdsFormat
 from pyffi.formats.nif import NifFormat
 
 from io_scene_niftools.modules.nif_export.animation.transform import TransformAnimation
@@ -344,11 +345,11 @@ class NifExport(NifCommon):
             nft_tex.file_name = abs_path.encode('utf-8')
                 
             if hasattr(nft_tex, 'pixel_layout'):
-                nft_tex.pixel_layout = 6 # PIX_LAY_DEFAULT or appropriate enum
+                nft_tex.pixel_layout = 6 # PIX_LAY_DEFAULT
             if hasattr(nft_tex, 'use_mipmaps'):
-                nft_tex.use_mipmaps = 0 # MIP_FMT_NO
+                nft_tex.use_mipmaps = 2 # MIP_FMT_DEFAULT
             if hasattr(nft_tex, 'alpha_format'):
-                nft_tex.alpha_format = 0 # ALPHA_DEFAULT
+                nft_tex.alpha_format = 3 # ALPHA_DEFAULT
             if hasattr(nft_tex, 'is_static'):
                 nft_tex.is_static = 1
             if hasattr(nft_tex, 'direct_render'):
@@ -420,8 +421,109 @@ class NifExport(NifCommon):
         return None
 
     @staticmethod
+    def _has_dds_input(file_path):
+        try:
+            with open(file_path, "rb") as stream:
+                return stream.read(4) == b"DDS "
+        except Exception:
+            return False
+
+    @staticmethod
+    def _create_pixeldata_from_dds(dds_path):
+        dds_data = DdsFormat.Data()
+        with open(dds_path, "rb") as stream:
+            dds_data.read(stream)
+
+        header = dds_data.header
+        pixel_format = header.pixel_format
+        if not pixel_format.flags.four_c_c:
+            raise ValueError("DDS is not block-compressed (missing FOURCC).")
+
+        if pixel_format.four_c_c == DdsFormat.FourCC.DXT1:
+            nif_pixel_format = NifFormat.PixelFormat.PX_FMT_DXT1
+            block_bytes = 8
+        elif pixel_format.four_c_c == DdsFormat.FourCC.DXT5:
+            nif_pixel_format = NifFormat.PixelFormat.PX_FMT_DXT5_ALT
+            block_bytes = 16
+        else:
+            raise ValueError(f"Unsupported DDS FOURCC: {pixel_format.four_c_c}")
+
+        width = max(1, int(header.width))
+        height = max(1, int(header.height))
+        mip_count = max(1, int(header.mipmap_count))
+
+        raw_bytes = dds_data.pixeldata.get_value()
+        if raw_bytes is None:
+            raise ValueError("DDS has no pixel payload.")
+        if isinstance(raw_bytes, str):
+            raw_bytes = raw_bytes.encode("latin-1")
+
+        mip_entries = []
+        offset = 0
+        for mip in range(mip_count):
+            mip_w = max(1, width >> mip)
+            mip_h = max(1, height >> mip)
+            mip_size = ((mip_w + 3) // 4) * ((mip_h + 3) // 4) * block_bytes
+            mip_entries.append((mip_w, mip_h, offset))
+            offset += mip_size
+
+        if offset != len(raw_bytes):
+            raise ValueError(
+                f"DDS payload size mismatch (expected {offset}, got {len(raw_bytes)})."
+            )
+
+        pixeldata = NifFormat.NiPixelData()
+        pixeldata.num_faces = 1
+        pixeldata.num_mipmaps = mip_count
+        pixeldata.bytes_per_pixel = 0
+        pixeldata.bits_per_pixel = 0
+        pixeldata.pixel_format = nif_pixel_format
+        pixeldata.red_mask = 0
+        pixeldata.green_mask = 0
+        pixeldata.blue_mask = 0
+        pixeldata.alpha_mask = 0
+
+        if hasattr(pixeldata, "unknown_int_2"):
+            pixeldata.unknown_int_2 = -1
+
+        if hasattr(pixeldata, "flags"):
+            pixeldata.flags = 1
+
+        pixeldata.mipmaps.update_size()
+        for i, (mip_w, mip_h, mip_offset) in enumerate(mip_entries):
+            pixeldata.mipmaps[i].width = mip_w
+            pixeldata.mipmaps[i].height = mip_h
+            pixeldata.mipmaps[i].offset = mip_offset
+
+        pixeldata.num_pixels = len(raw_bytes)
+        pixeldata.pixel_data.update_size()
+
+        byte_data = bytearray(raw_bytes)
+        data_row = pixeldata.pixel_data[0]
+        if hasattr(data_row, "_items"):
+            data_row._items = list(byte_data)
+        else:
+            for i in range(len(byte_data)):
+                data_row[i] = byte_data[i]
+
+        return pixeldata
+
+    @staticmethod
     def _create_pixeldata_from_image(image):
         import numpy as np
+
+        image_path = ""
+        try:
+            image_path = os.path.normpath(bpy.path.abspath(image.filepath))
+        except Exception:
+            image_path = ""
+
+        if image_path and os.path.exists(image_path) and NifExport._has_dds_input(image_path):
+            try:
+                NifLog.info(f"[NFT] Reading compressed DDS payload from '{image_path}'")
+                return NifExport._create_pixeldata_from_dds(image_path)
+            except Exception as ex:
+                NifLog.warn(f"[NFT] Failed to use DDS payload for '{image.name}': {ex}. Falling back to RGBA8.")
         
         width, height = image.size
         num_pixels = width * height
