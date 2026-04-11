@@ -167,7 +167,11 @@ class ObjectProperty:
         # don't export an alpha property if mat is opaque in blender
         if b_mat.blend_method == "OPAQUE":
             return
-        if b_mat.niftools_alpha.alphaflag != 0:
+
+        if bpy.context.scene.niftools_scene.game == 'BULLY_SE':
+            flags = 4844
+            threshold = 100
+        elif b_mat.niftools_alpha.alphaflag != 0:
             # todo [material] reconstruct flag from material alpha settings
             flags = b_mat.niftools_alpha.alphaflag
             threshold = b_mat.alpha_threshold * 255
