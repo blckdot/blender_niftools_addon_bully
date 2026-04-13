@@ -372,9 +372,9 @@ class Mesh:
             # (civ4 seems to be consistent with not using tangent space on non shadered nifs)
             if use_tangents:
                 if game == 'SKYRIM':
-                    tridata.bs_num_uv_sets = tridata.bs_num_uv_sets + 4096
+                    tridata.bs_num_uv_sets |= 4096
                 elif game == 'BULLY_SE':
-                    tridata.num_uv_sets = tridata.num_uv_sets + 4096
+                    tridata.num_uv_sets |= 4096
                 # calculate the bitangents using the normals, tangent list and bitangent sign
                 bitangents = bitangent_signs * np.cross(normals, tangents)
                 # B_tan: +d(B_u), B_bit: +d(B_v) and N_tan: +d(N_v), N_bit: +d(N_u)
@@ -620,7 +620,7 @@ class Mesh:
             trishape.flags = b_obj.niftools.flags
         # fall back to defaults
         else:
-            if bpy.context.scene.niftools_scene.game in ('OBLIVION', 'FALLOUT_3', 'SKYRIM'):
+            if bpy.context.scene.niftools_scene.game in ('OBLIVION', 'FALLOUT_3', 'SKYRIM', 'BULLY_SE'):
                 trishape.flags = 0x000E
 
             elif bpy.context.scene.niftools_scene.game in ('SID_MEIER_S_RAILROADS', 'CIVILIZATION_IV'):

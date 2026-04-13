@@ -169,13 +169,13 @@ class ObjectProperty:
         if b_mat.blend_method == "OPAQUE":
             return
 
-        if bpy.context.scene.niftools_scene.game == 'BULLY_SE':
-            flags = 4844
-            threshold = 100
-        elif b_mat.niftools_alpha.alphaflag != 0:
+        if b_mat.niftools_alpha.alphaflag != 0:
             # todo [material] reconstruct flag from material alpha settings
             flags = b_mat.niftools_alpha.alphaflag
             threshold = b_mat.alpha_threshold * 255
+        elif bpy.context.scene.niftools_scene.game == 'BULLY_SE':
+            flags = 0x12EC
+            threshold = 100
         elif bpy.context.scene.niftools_scene.game == 'SID_MEIER_S_RAILROADS':
             flags = 0x32ED
             threshold = 150
@@ -279,7 +279,7 @@ class ObjectDataProperty:
                         if found_bsx:
                             raise NifError("Multiple objects have BSXFlags. Only one onject may contain this data")
                         else:
-                            found_bxs = True
+                            found_bsx = True
                             bsx.integer_data = root_object.niftools.bsxflags
 
                 # many Oblivion nifs have a UPB, but export is disabled as

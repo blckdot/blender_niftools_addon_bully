@@ -143,10 +143,12 @@ class NifImport(NifCommon):
         if NifOp.props.override_scene_info:
             scene.import_version_info(NifData.data)
 
+        # clear any NFT texture data from a previous import session
+        from io_scene_niftools.utils.singleton import NFTData
+        NFTData.reset()
+
         # check for .nft if requested
         if hasattr(NifOp.props, "read_nft") and NifOp.props.read_nft:
-            from io_scene_niftools.utils.singleton import NFTData
-            NFTData.reset()
             nft_path = os.path.splitext(NifOp.props.filepath)[0] + ".nft"
             if os.path.exists(nft_path):
                 try:

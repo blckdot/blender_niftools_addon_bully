@@ -273,7 +273,7 @@ class NifExport(NifCommon):
             with open(niffile, "wb") as stream:
                 data.write(stream)
 
-            if NifOp.props.export_nft:
+            if getattr(NifOp.props, 'export_nft', False):
                 nftfile = os.path.join(directory, prefix + filebase + ".nft")
                 NifLog.info(f"Writing .nft file: {nftfile}")
                 embedded_data = self._create_embedded_texture_data(data, root_block)
@@ -319,6 +319,17 @@ class NifExport(NifCommon):
             orig_file_name = file_name
             
             if not source_texture.use_external:
+                if source_texture.pixel_data is not None:
+                    nft_tex = NifFormat.NiSourceTexture()
+                    nft_tex.use_external = 0
+                    nft_tex.unknown_byte = 1
+                    nft_tex.file_name = source_texture.file_name
+                    nft_tex.pixel_data = source_texture.pixel_data
+                    nft_roots.append(nft_tex)
+                    embedded_count += 1
+                    NifLog.info(f"[NFT] Forwarded already-embedded texture as-is")
+                else:
+                    NifLog.warn(f"[NFT] Non-external texture has no pixel_data, skipping")
                 continue
                 
             if isinstance(file_name, bytes):
@@ -360,7 +371,7 @@ class NifExport(NifCommon):
             # Add Extra Data and PixelData blocks to the NiSourceTexture
             str_extra = NifFormat.NiStringExtraData()
             str_extra.name = b""
-            str_extra.bytes_data = nft_tex.file_name
+            str_extra.string_data = nft_tex.file_name
 
             int_extra = NifFormat.NiIntegerExtraData()
             int_extra.name = b"NifPackMinorVersion"
@@ -384,41 +395,77 @@ class NifExport(NifCommon):
         return embedded_data
 
     def _load_texture_image(self, file_name):
-        search_name = os.path.splitext(os.path.basename(file_name))[0].lower()
-        NifLog.info(f"[NFT] Looking for image matching '{search_name}' in exported objects")
+        """Find the Blender image that corresponds to the NIF texture path *file_name*."""
 
+        # Normalise the NIF path for comparison
+        search_basename = os.path.splitext(os.path.basename(file_name))[0].lower()
+        try:
+            search_abs = os.path.normpath(os.path.abspath(file_name)).lower()
+        except Exception:
+            search_abs = ""
+
+        NifLog.info(f"[NFT] Looking for image matching '{file_name}' in exported objects")
+
+        # Collect all candidate images from exported mesh materials (deduplicated)
+        seen = set()
+        candidates = []
         for b_obj in self.exportable_objects:
             if b_obj.type != 'MESH':
                 continue
-
             for mat in b_obj.data.materials:
                 if not mat or not getattr(mat, "use_nodes", False):
                     continue
-
                 for node in mat.node_tree.nodes:
                     if node.type == 'TEX_IMAGE' and node.image:
-                        image = node.image
+                        img = node.image
+                        if img.name not in seen:
+                            seen.add(img.name)
+                            candidates.append(img)
 
-                        img_path_name = os.path.splitext(os.path.basename(image.filepath))[0].lower()
-                        img_obj_name = os.path.splitext(image.name)[0].lower()
+        def _validate(image):
+            """Return image if usable, None otherwise."""
+            if getattr(image, "source", None) == 'GENERATED' and image.size[0] == 1 and image.size[1] == 1:
+                NifLog.warn(f"[NFT] Texture '{image.name}' is a 1x1 generated dummy image. Skipping packing.")
+                return None
+            if not getattr(image, "packed_file", None):
+                try:
+                    abs_path = os.path.normpath(bpy.path.abspath(image.filepath))
+                    if not os.path.exists(abs_path):
+                        NifLog.warn(f"[NFT] Texture '{image.name}' file missing at '{abs_path}'. Skipping packing.")
+                        return None
+                except Exception:
+                    pass
+            return image
 
-                        if img_path_name == search_name or img_obj_name == search_name:
-                            if getattr(image, "source", None) == 'GENERATED' and image.size[0] == 1 and image.size[1] == 1:
-                                NifLog.warn(f"[NFT] Texture '{image.name}' is a 1x1 generated dummy image. Skipping packing.")
-                                return None
-                            try:
-                                abs_path = os.path.normpath(bpy.path.abspath(image.filepath))
-                                if not getattr(image, "packed_file", None) and not os.path.exists(abs_path):
-                                    NifLog.warn(f"[NFT] Texture '{image.name}' physical file is missing from PC path '{abs_path}'. Skipping packing.")
-                                    return None
-                            except Exception:
-                                pass
+        # exact absolute path match
+        for image in candidates:
+            try:
+                img_abs = os.path.normpath(bpy.path.abspath(image.filepath)).lower()
+            except Exception:
+                img_abs = ""
+            if search_abs and img_abs and img_abs == search_abs:
+                NifLog.info(f"[NFT] exact path match: {image.name}")
+                return _validate(image)
 
-                            NifLog.info(f"[NFT] Found used image from mesh material: {image.name}")
-                            return image
+        # case-insensitive basename match
+        for image in candidates:
+            img_path_stem = os.path.splitext(os.path.basename(image.filepath))[0].lower()
+            img_name_stem = os.path.splitext(image.name)[0].lower()
+            if img_path_stem == search_basename or img_name_stem == search_basename:
+                NifLog.info(f"[NFT] basename match: {image.name}")
+                return _validate(image)
 
-        NifLog.warn(f"[NFT] Could not find the original image for '{file_name}' assigned in exported materials!")
+        # match by Blender image name stem
+        for image in candidates:
+            if getattr(image, "packed_file", None):
+                img_name_stem = os.path.splitext(image.name)[0].lower()
+                if img_name_stem == search_basename:
+                    NifLog.info(f"[NFT] packed name match: {image.name}")
+                    return _validate(image)
+
+        NifLog.warn(f"[NFT] Could not find the original image for '{file_name}' in exported materials!")
         return None
+
 
     @staticmethod
     def _has_dds_input(file_path):
@@ -580,7 +627,6 @@ class NifExport(NifCommon):
         pixeldata.mipmaps[0].offset = 0
 
         # The pixel data is stored in a single byte array. The length of this array is num_pixels * bytes_per_pixel.
-        pixeldata.num_pixels = num_bytes
         pixeldata.pixel_data.update_size()
         
         # Convert from Blender's float RGBA to byte RGBA
