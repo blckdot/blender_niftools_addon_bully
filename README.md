@@ -18,7 +18,10 @@ Compatible with Blender 5.x, may NOT be compatible with anything lower than that
   
 ![20260401131135_1](https://github.com/user-attachments/assets/4cd37934-2b36-422f-9663-8156e2c6216a)
 ![20260403211727_1](https://github.com/user-attachments/assets/aec979e5-8436-4b2d-99a6-78fd4a194a21)
-![20260403233829_1](https://github.com/user-attachments/assets/575ae777-03bb-4500-b801-4d255abf2a43)
+![20260411230233_1](https://github.com/user-attachments/assets/31e9e1a7-9bd5-4379-aec9-dad4eb458789)
+![20260411234445_1](https://github.com/user-attachments/assets/57dc1878-acf1-4000-a10d-35cc6ff1bcc3)
+![20260412000149_1](https://github.com/user-attachments/assets/2010f2c1-1427-4144-b650-31a530dc93f9)
+![20260413195334_1](https://github.com/user-attachments/assets/a9ca24ed-1064-4e8e-8e60-af304b468313)
 
 </details>
 
