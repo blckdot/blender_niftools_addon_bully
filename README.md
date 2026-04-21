@@ -22,6 +22,8 @@ Compatible with Blender 5.x, may NOT be compatible with anything lower than that
 ![20260411234445_1](https://github.com/user-attachments/assets/57dc1878-acf1-4000-a10d-35cc6ff1bcc3)
 ![20260412000149_1](https://github.com/user-attachments/assets/2010f2c1-1427-4144-b650-31a530dc93f9)
 ![20260413195334_1](https://github.com/user-attachments/assets/a9ca24ed-1064-4e8e-8e60-af304b468313)
+![20260421100809_1](https://github.com/user-attachments/assets/bb6b3708-72ab-4b58-9f69-cd9bbba695c9)
+
 
 </details>
 
